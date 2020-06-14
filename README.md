@@ -1,4 +1,4 @@
 # yaddd
-Dynamic DNS Daemon for Yandex API
+Dynamic DNS Daemon for Yandex Connect API
 
-Простой сервис, обеспечивающий обновление IP-адреса версии 4 в Яндекс.Коннекте с помощью JSON API https://ipify.org.
+Простой сервис, обеспечивающий обновление A-записи (IP-адреса версии 4) в Яндекс.Коннекте с помощью JSON API https://ipify.org.
