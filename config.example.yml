@@ -1,0 +1,4 @@
+pddToken: 123456789ABCDEF0000000000000000000000000000000000000
+domain: example.com
+cron: "@every 30m"
+email: admin@example.com
