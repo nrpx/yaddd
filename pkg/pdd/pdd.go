@@ -1,7 +1,7 @@
 package pdd
 
 import (
-	"encoding/json"
+	"bytes"
 	"errors"
 	"strconv"
 )
@@ -35,18 +35,8 @@ type PddInt struct {
 }
 
 func (i *PddInt) UnmarshalJSON(data []byte) (err error) {
-	if err = json.Unmarshal(data, &i.Text); err != nil {
-		if err = json.Unmarshal(data, &i.Val); err != nil {
-			return
-		}
-	}
-
-	if i.Text != "" {
-		if i.Val, err = strconv.Atoi(i.Text); err != nil {
-			return
-		}
-	} else {
-		i.Text = strconv.Itoa(i.Val)
+	if i.Text = string(bytes.Trim(data, `"`)); i.Text != "" {
+		i.Val, err = strconv.Atoi(i.Text)
 	}
 
 	return

@@ -8,16 +8,16 @@ import (
 
 const onPage = 10
 
-type PddDomains struct {
+type Domains struct {
 	PddResult `json:",inline"`
 	Page      int
 	OnPage    int `json:"on_page"`
 	Total     int
 	Found     int
-	Domains   []PddDomain
+	Domains   []Domain
 }
 
-type PddDomain struct {
+type Domain struct {
 	Name           string
 	Status         string
 	Aliases        []string
@@ -31,50 +31,53 @@ type PddDomain struct {
 	NoDKIM         PddBool `json:"nodkim"`
 }
 
-func (c *Client) GetDomains() (d []PddDomain, err error) {
+func (c *Client) GetDomains() (d []Domain, err error) {
 	first, err := c.getDomainsPage(1)
 	if err != nil {
 		return
 	}
 
-	if first.Total > first.OnPage {
-		pages := first.Total / first.OnPage
+	d = append(d, first.Domains...)
 
-		if first.Total%first.OnPage > 0 {
-			pages += 1
-		}
-
-		var errGr errgroup.Group
-		domainsCh := make(chan PddDomains, pages-1)
-
-		for i := 2; i <= int(pages); i++ {
-			errGr.Go(func() error {
-				return c.getDomainsRoutine(domainsCh, i)
-			})
-		}
-
-		if err = errGr.Wait(); err != nil {
-			return nil, err
-		}
-
-		for domains := range domainsCh {
-			d = append(d, domains.Domains...)
-		}
+	if first.Total <= first.OnPage {
+		return
 	}
 
-	d = append(first.Domains, d...)
+	var errGr errgroup.Group
+
+	pages := (first.Total + first.OnPage - 1) / first.OnPage
+	domainsCh := make(chan Domains, pages-1)
+
+	for i := 2; i <= pages; i++ {
+		i := i // For `pages > GOMAXPROCS`
+
+		errGr.Go(func() error {
+			return c.getDomainsRoutine(domainsCh, i)
+		})
+	}
+
+	if err = errGr.Wait(); err != nil {
+		return nil, err
+	}
+
+	close(domainsCh)
+
+	for domains := range domainsCh {
+		d = append(d, domains.Domains...)
+	}
 
 	return
 }
 
-func (c *Client) getDomainsPage(page int) (d PddDomains, err error) {
-	p := make(Params)
-	p["page"] = strconv.Itoa(page)
-	p["on_page"] = strconv.Itoa(onPage)
+func (c *Client) getDomainsPage(page int) (d Domains, err error) {
+	p := Params{
+		"page":    strconv.Itoa(page),
+		"on_page": strconv.Itoa(onPage),
+	}
 
 	req := Request{c, serviceDomain, methodDomains, p}
 
-	d = PddDomains{}
+	d = Domains{}
 	if err = req.do(&d); err != nil {
 		return
 	}
@@ -82,7 +85,7 @@ func (c *Client) getDomainsPage(page int) (d PddDomains, err error) {
 	return
 }
 
-func (c *Client) getDomainsRoutine(ch chan PddDomains, page int) (err error) {
+func (c *Client) getDomainsRoutine(ch chan Domains, page int) (err error) {
 	domains, err := c.getDomainsPage(page)
 	if err != nil {
 		return

@@ -2,6 +2,8 @@ package pdd
 
 import (
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -32,19 +34,18 @@ func getURLFor(s Service, m Method, p Params) (u url.URL, err error) {
 		return u, methodUnknownErr
 	}
 
-	u = url.URL{
-		Scheme: pddScheme,
-		Host:   pddHost,
-		Path:   path.Join(pddAPIPath, s.String(), m.String()),
-	}
-
-	q := u.Query()
+	q := url.Values{}
 
 	for key, val := range p {
 		q.Set(key, val)
 	}
 
-	u.RawQuery = q.Encode()
+	u = url.URL{
+		Scheme:   pddScheme,
+		Host:     pddHost,
+		Path:     path.Join(pddAPIPath, s.String(), m.String()),
+		RawQuery: q.Encode(),
+	}
 
 	return
 }
@@ -67,7 +68,10 @@ func (r Request) do(rr Response) (err error) {
 		return
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
 
 	decoder := json.NewDecoder(resp.Body)
 	if err != nil {

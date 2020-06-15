@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 	"yaddd/internal/config"
-	"yaddd/internal/core/pdd"
+	"yaddd/pkg/pdd"
 
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
@@ -18,11 +18,15 @@ var (
 	moreThanOneRecordErr = errors.New("Found more than one A-record")
 )
 
+// Основная структура сервиса.
 type dynDNS struct {
+	// Клиент для работы с API Яндекс.Коннект.
 	pddClient *pdd.Client
-	conf      *config.Config
+	// Конигурация сервиса.
+	conf *config.Config
 }
 
+// Запуск сервиса с указанной конфигурацией.
 func StartService(conf *config.Config) (err error) {
 	pddClient, err := pdd.NewClient(conf.PddToken)
 	if err != nil {
@@ -55,27 +59,23 @@ func StartService(conf *config.Config) (err error) {
 	return
 }
 
+// Проверка существования указанного в конфигурации домена в Яндекс.Коннект.
 func (d *dynDNS) checkDomain() (err error) {
 	domains, err := d.pddClient.GetDomains()
 	if err != nil {
 		return
 	}
 
-	var ok bool
 	for _, domain := range domains {
 		if domain.Name == d.conf.DomainName {
-			ok = true
-			break
+			return
 		}
 	}
 
-	if !ok {
-		return domainNotFoundErr
-	}
-
-	return
+	return domainNotFoundErr
 }
 
+// Получение A-записи (с указанным IP, если имеется) из DNS-записей Яндекс.Коннект.
 func (d *dynDNS) getARecord() (r pdd.DNSRecordStruct, err error) {
 	records, err := d.pddClient.GetDNSRecords(d.conf.DomainName)
 	if err != nil {
@@ -107,6 +107,7 @@ func (d *dynDNS) getARecord() (r pdd.DNSRecordStruct, err error) {
 	return
 }
 
+// Обновление IP-адреса.
 func (d *dynDNS) updateIP() {
 	ip, err := GetExternalIP()
 	if err != nil {

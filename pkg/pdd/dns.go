@@ -5,6 +5,8 @@ import (
 	"strconv"
 )
 
+var domainEmptyErr = errors.New("domain is required")
+
 type DNSRecordType string
 
 const (
@@ -17,8 +19,6 @@ const (
 	TypeSRV   DNSRecordType = "SRV"
 	TypeTXT   DNSRecordType = "TXT"
 )
-
-var domainEmptyErr = errors.New("Domain is required")
 
 type DNSRecordStruct struct {
 	RecordID  int `json:"record_id"`

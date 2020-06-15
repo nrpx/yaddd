@@ -17,6 +17,8 @@ func GetExternalIP() (ip string, err error) {
 		return
 	}
 
+	defer res.Body.Close()
+
 	rawIP, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		logrus.WithError(err).Error("Read received IP")

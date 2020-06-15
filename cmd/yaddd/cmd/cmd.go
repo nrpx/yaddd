@@ -20,13 +20,13 @@ import (
 const defaultConfigPath = "/etc/yaddd/config.yml"
 
 // Неизвестное расширение файла.
-var ErrUnknownFileExt = errors.New("unknown file extension")
+var errUnknownFileExt = errors.New("unknown file extension")
 
 // Основная команда.
 type cmd struct{ conf config.Config }
 
-// Парсинг конигурации из JSON- или YAML-файла.
-func parseConfigFile(configFile string, to *config.Config) (err error) {
+// Загрузка файла конфигурации.
+func (c *cmd) loadConfig(configFile string) (err error) {
 	var confData []byte
 
 	fileExt := strings.ToLower(path.Ext(configFile))
@@ -40,7 +40,7 @@ func parseConfigFile(configFile string, to *config.Config) (err error) {
 		unmarshal = json.Unmarshal
 	default:
 		return fmt.Errorf("read config: %w: %s",
-			ErrUnknownFileExt, fileExt)
+			errUnknownFileExt, fileExt)
 	}
 
 	confData, err = ioutil.ReadFile(configFile)
@@ -49,25 +49,11 @@ func parseConfigFile(configFile string, to *config.Config) (err error) {
 		return fmt.Errorf("read config: %w", err)
 	}
 
-	if err = unmarshal(confData, to); err != nil {
+	if err = unmarshal(confData, &c.conf); err != nil {
 		err = fmt.Errorf("parse config: %w", err)
 	}
 
 	return err
-}
-
-// Загрузка файла конфигурации.
-func (c *cmd) loadConfig(configFile string) (err error) {
-	if err = parseConfigFile(configFile, &c.conf); err != nil {
-		return fmt.Errorf("parse config file: %w", err)
-	}
-
-	return
-}
-
-// Внутренний запуск сервиса.
-func (c *cmd) run() (err error) {
-	return core.StartService(&c.conf)
 }
 
 // Инициализация сервиса с учетом переданных флагов.
@@ -113,5 +99,5 @@ func Run(args []string) (err error) {
 		return err
 	}
 
-	return c.run()
+	return core.StartService(&c.conf)
 }
